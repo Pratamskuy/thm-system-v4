@@ -168,9 +168,17 @@
   background-color: #450a0a;
   color: #f87171;
 }
+[data-theme="dark"] .badge-warning {
+  background-color: #3a450a;
+  color: #f87171;
+}
+.badge-warning {
+  background-color: #d0ff0041;
+  color: #000000;
+}
 
 [data-theme="dark"] .badge-waiting {
-  background-color: #1e3a8a;
+  background-color: #5b8a1e8a;
   color: #93c5fd;
 }
 

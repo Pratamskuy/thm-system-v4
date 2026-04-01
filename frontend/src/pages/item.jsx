@@ -374,13 +374,9 @@ function Items() {
                   <p className="shop-card-description text-clamp-2">
                     {item.description || 'No description available.'}
                   </p>
-                  <div className="shop-card-meta">
-                    <span className="shop-meta-label">Condition</span>
-                    <span className={`badge ${conditionBadge}`}>{item.item_condition}</span>
-                  </div>
                   <div className="shop-card-meta" style={{ gap: '0.35rem' }}>
-                    <span className="shop-meta-label">Stok:</span>
-                    <span className="badge badge-approved">N: {item.stock_normal || 0}</span>
+                    <span className="shop-meta-label">stock:</span>
+                    <span className="badge badge-approved">NRML: {item.stock_normal || 0}</span>
                     <span className="badge badge-approved">OK: {item.stock_ok || 0}</span>
                     <span className="badge badge-warning">NG: {item.stock_not_good || 0}</span>
                     <span className="badge badge-rejected">BR: {item.stock_broken || 0}</span>
