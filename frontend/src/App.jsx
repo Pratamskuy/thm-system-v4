@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -157,11 +158,24 @@ function AppRoutes() {
 }
 
 function App() {
+  const cursorRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      if (!cursorRef.current) return;
+      cursorRef.current.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>
         <CartProvider>
           <div className="app-container">
+            <div className="cursor-follower" ref={cursorRef} />
             <AppRoutes />
           </div>
         </CartProvider>

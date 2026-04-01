@@ -232,9 +232,40 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.cursor-follower {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.95) 0%, rgba(59, 130, 246, 0.15) 55%, transparent 100%);
+  box-shadow: 0 0 50px 18px rgba(59, 130, 246, 0.25), 0 0 0 1px rgba(59, 130, 246, 0.45);
+  pointer-events: none;
+  transform: translate3d(-50%, -50%, 0);
+  transition: transform 0.1s ease-out, width 0.15s ease-out, height 0.15s ease-out, background 0.15s ease-out;
+  z-index: -1;
+}
+
+.cursor-follower::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%);
+}
+
+body[data-theme="dark"] .cursor-follower {
+  background: rgba(96, 165, 250, 0.9);
+  box-shadow: 0 0 24px rgba(77, 142, 223, 0.35);
 }
 
 /* Navigation */
+
 .navbar {
   background-color: var(--card-bg);
   box-shadow: var(--shadow-sm);
