@@ -266,19 +266,25 @@ item.js
 getAll disortir berdasarkan item_condition
 getAvailable sekarang hanya menampilkan item tersedia dan tidak broken
 ditambahkan updateCondition untuk mengubah kondisi item
+
 pinjam.js
 peminjaman akan ditolak jika item statusnya broken
+
 ControllerReturn.js
 konfirmasi/pembuatan pengembalian sekarang menyimpan item_condition
 jika kondisi broken, stok tidak dikembalikan ke available
 kondisi item diperbarui di tabel items
+
 item.jsx
 mode peminjaman mengambil /alat/tersedia untuk menyembunyikan item broken
 daftar item disortir berdasarkan kondisi
+
 api.js
 returnAPI.confirm menerima payload { item_condition, notes }
+
 swalService.js
 ditambahkan dialog konfirmasi pengembalian dengan dropdown kondisi + catatan
+
 borrow.jsx
 tombol konfirmasi return sekarang memunculkan popup status
 batch confirm juga dapat mengirim status yang dipilih
