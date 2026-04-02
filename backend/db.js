@@ -248,6 +248,7 @@ const createAllTables = (connection, callback) => {
             'taken',
             'cancelled'
         ) DEFAULT 'pending',
+        item_condition ENUM('normal', 'ok', 'not good', 'broken') DEFAULT 'normal',
         id_officer_approval INT,
         approval_date DATETIME,
         notes TEXT,
@@ -315,6 +316,7 @@ const createAllTables = (connection, callback) => {
 
         const migrationTasks = [
             (next) => ensureColumn(connection, 'borrow_data', 'request_id', 'INT NULL', next),
+            (next) => ensureColumn(connection, 'borrow_data', 'item_condition', "ENUM('normal', 'ok', 'not good', 'broken') DEFAULT 'normal'", next),
             (next) =>
                 ensureEnumDefinition(
                     connection,

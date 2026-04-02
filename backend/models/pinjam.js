@@ -25,6 +25,27 @@ const createError = (message, code) => {
     return err;
 };
 
+const conditionField = (condition) => {
+    const normalized = String(condition || '').toLowerCase();
+    if (normalized === 'ok') return 'stock_ok';
+    if (normalized === 'not good') return 'stock_not_good';
+    if (normalized === 'broken') return 'stock_broken';
+    return 'stock_normal';
+};
+
+const normalizeBorrowCondition = (condition) => {
+    const value = String(condition || 'normal').toLowerCase();
+    if (['normal', 'ok', 'not good', 'broken'].includes(value)) {
+        return value;
+    }
+    return 'normal';
+};
+
+const getConditionStock = (itemRow, condition) => {
+    const field = conditionField(condition);
+    return Number(itemRow[field]) || 0;
+};
+
 const withTransaction = (work, callback) => {
     db.getConnection((err, connection) => {
         if (err) {
@@ -195,7 +216,7 @@ const processQueuedForItemOnConnection = (connection, itemId, callback) => {
     }
 
     const lockItemQuery = `
-        SELECT id, available
+        SELECT id, available, stock_normal, stock_ok, stock_not_good
         FROM items
         WHERE id = ?
         FOR UPDATE
@@ -211,7 +232,7 @@ const processQueuedForItemOnConnection = (connection, itemId, callback) => {
         }
 
         const queueLockQuery = `
-            SELECT bd.id, bd.request_id, bd.item_count, u.email, COALESCE(u.full_name, u.name) AS user_name, i.item_name
+            SELECT bd.id, bd.request_id, bd.item_count, bd.item_condition, u.email, COALESCE(u.full_name, u.name) AS user_name, i.item_name
             FROM borrow_data bd
             JOIN user_data u ON bd.id_user = u.id
             JOIN items i ON bd.id_items = i.id
@@ -926,7 +947,7 @@ const createBatch = (data, callback) => {
                         FOR UPDATE
                     `;
 
-                    connection.query(lockItemQuery, [current.id_items], (lockErr, itemRows) => {
+                    connection.query (lockItemQuery, [current.id_items], (lockErr, itemRows) => {
                         if (lockErr) {
                             return done(lockErr);
                         }
@@ -953,7 +974,22 @@ const createBatch = (data, callback) => {
                         const stockNormal = Number(itemRow.stock_normal) || 0;
                         const stockOk = Number(itemRow.stock_ok) || 0;
                         const stockNotGood = Number(itemRow.stock_not_good) || 0;
-                        const shouldReserveStock = availableStock >= current.item_count;
+                        const requestedCondition = normalizeBorrowCondition(current.item_condition);
+                        const conditionStock = getConditionStock(itemRow, requestedCondition);
+                        const hasRequestedCondition = current.item_condition !== undefined && current.item_condition !== null;
+
+                        if (requestedCondition === 'broken') {
+                            return done(
+                                createError(
+                                    `Item "${itemRow.item_name}" tidak dapat dipinjam dengan kondisi broken`,
+                                    'BROKEN_ITEM'
+                                )
+                            );
+                        }
+
+                        const shouldReserveStock = hasRequestedCondition
+                            ? conditionStock >= current.item_count
+                            : availableStock >= current.item_count;
                         const borrowStatus = shouldReserveStock ? 'pending' : 'queued';
 
                         const insertBorrowItem = () => {
@@ -965,9 +1001,10 @@ const createBatch = (data, callback) => {
                                     item_count,
                                     return_date_expected,
                                     notes,
-                                    status
+                                    status,
+                                    item_condition
                                 )
-                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                             `;
 
                             connection.query(
@@ -980,6 +1017,7 @@ const createBatch = (data, callback) => {
                                     current.return_date_expected,
                                     current.notes,
                                     borrowStatus,
+                                    requestedCondition,
                                 ],
                                 (insertErr, insertResult) => {
                                     if (insertErr) {
@@ -1001,38 +1039,69 @@ const createBatch = (data, callback) => {
                             return insertBorrowItem();
                         }
 
-                        const reserveStockQuery = `
-                            UPDATE items
-                            SET available = available - ?,
-                                stock_normal = ?,
-                                stock_ok = ?,
-                                stock_not_good = ?
-                            WHERE id = ? AND available >= ?
-                        `;
+                        if (hasRequestedCondition) {
+                            const conditionFieldName = conditionField(requestedCondition);
+                            const reserveStockQuery = `
+                                UPDATE items
+                                SET available = available - ?,
+                                    ${conditionFieldName} = ${conditionFieldName} - ?
+                                WHERE id = ? AND available >= ? AND ${conditionFieldName} >= ?
+                            `;
 
-                        const remainingToReserve = current.item_count;
-                        let normalToUse = Math.min(stockNormal, remainingToReserve);
-                        let remaining = remainingToReserve - normalToUse;
-                        let okToUse = Math.min(stockOk, remaining);
-                        remaining -= okToUse;
-                        let notGoodToUse = Math.min(stockNotGood, remaining);
-                        remaining -= notGoodToUse;
+                            connection.query(
+                                reserveStockQuery,
+                                [
+                                    current.item_count,
+                                    current.item_count,
+                                    current.id_items,
+                                    current.item_count,
+                                    current.item_count,
+                                ],
+                                (reserveErr, reserveResult) => {
+                                    if (reserveErr) {
+                                        return done(reserveErr);
+                                    }
 
-                        const nextStockNormal = stockNormal - normalToUse;
-                        const nextStockOk = stockOk - okToUse;
-                        const nextStockNotGood = stockNotGood - notGoodToUse;
+                                    if (reserveResult.affectedRows === 0) {
+                                        return insertBorrowItem();
+                                    }
 
-                        connection.query(
-                            reserveStockQuery,
-                            [
-                                current.item_count,
-                                nextStockNormal,
-                                nextStockOk,
-                                nextStockNotGood,
-                                current.id_items,
-                                current.item_count,
-                            ],
-                            (reserveErr, reserveResult) => {
+                                    insertBorrowItem();
+                                }
+                            );
+                        } else {
+                            const reserveStockQuery = `
+                                UPDATE items
+                                SET available = available - ?,
+                                    stock_normal = ?,
+                                    stock_ok = ?,
+                                    stock_not_good = ?
+                                WHERE id = ? AND available >= ?
+                            `;
+
+                            const remainingToReserve = current.item_count;
+                            let normalToUse = Math.min(stockNormal, remainingToReserve);
+                            let remaining = remainingToReserve - normalToUse;
+                            let okToUse = Math.min(stockOk, remaining);
+                            remaining -= okToUse;
+                            let notGoodToUse = Math.min(stockNotGood, remaining);
+                            remaining -= notGoodToUse;
+
+                            const nextStockNormal = stockNormal - normalToUse;
+                            const nextStockOk = stockOk - okToUse;
+                            const nextStockNotGood = stockNotGood - notGoodToUse;
+
+                            connection.query(
+                                reserveStockQuery,
+                                [
+                                    current.item_count,
+                                    nextStockNormal,
+                                    nextStockOk,
+                                    nextStockNotGood,
+                                    current.id_items,
+                                    current.item_count,
+                                ],
+                                (reserveErr, reserveResult) => {
                                 if (reserveErr) {
                                     return done(reserveErr);
                                 }
@@ -1049,6 +1118,7 @@ const createBatch = (data, callback) => {
                                 insertBorrowItem();
                             }
                         );
+                    }
                     });
                 };
 

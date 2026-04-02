@@ -97,15 +97,21 @@ export const showReturnConditionDialog = async ({
   defaultCondition = 'normal',
 } = {}) => {
   const html = `
-    <label for="return-condition" style="display:block;text-align:left;margin-bottom:0.35rem;font-weight:600;">Kondisi Barang</label>
-    <select id="return-condition" class="swal2-select" style="width:100%;padding:0.75rem;border:1px solid #dcdcdc;border-radius:0.5rem;">
-      <option value="normal">Normal</option>
-      <option value="ok">OK</option>
-      <option value="not good">Not Good</option>
-      <option value="broken">Broken</option>
-    </select>
-    <label for="return-notes" style="display:block;text-align:left;margin:1rem 0 0.35rem;font-weight:600;">Catatan (opsional)</label>
-    <textarea id="return-notes" class="swal2-textarea" rows="4" style="width:100%;padding:0.75rem;border:1px solid #dcdcdc;border-radius:0.5rem;"></textarea>
+    <div class="swal2-return-form">
+      <div class="swal2-form-row">
+        <label for="return-condition">Kondisi Barang</label>
+        <select id="return-condition" class="swal2-select">
+          <option value="normal">Normal</option>
+          <option value="ok">OK</option>
+          <option value="not good">Not Good</option>
+          <option value="broken">Broken</option>
+        </select>
+      </div>
+      <div class="swal2-form-row">
+        <label for="return-notes">Catatan (opsional)</label>
+        <textarea id="return-notes" class="swal2-textarea" rows="4"></textarea>
+      </div>
+    </div>
   `;
 
   const result = await Swal.fire({

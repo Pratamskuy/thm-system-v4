@@ -13,6 +13,16 @@ const safeParse = (value) => {
   }
 };
 
+const getDefaultCartCondition = (item) => {
+  const normal = Number(item?.stock_normal) || 0;
+  const ok = Number(item?.stock_ok) || 0;
+  const notGood = Number(item?.stock_not_good) || 0;
+  if (normal > 0) return 'normal';
+  if (ok > 0) return 'ok';
+  if (notGood > 0) return 'not good';
+  return 'normal';
+};
+
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
@@ -32,7 +42,11 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     const stored = safeParse(localStorage.getItem(storageKey));
-    setItems(stored);
+    const normalized = stored.map((entry) => ({
+      ...entry,
+      condition: entry.condition || 'normal',
+    }));
+    setItems(normalized);
   }, [storageKey]);
 
   useEffect(() => {
@@ -47,6 +61,7 @@ export const CartProvider = ({ children }) => {
       : Number.isFinite(Number(item.available)) && Number(item.available) > 0
       ? Number(item.available)
       : null;
+    const defaultCondition = item.condition || getDefaultCartCondition(item);
 
     setItems((prev) => {
       const existing = prev.find((entry) => entry.id === item.id);
@@ -65,6 +80,7 @@ export const CartProvider = ({ children }) => {
           id: item.id,
           item_name: item.item_name,
           quantity: finalQty,
+          condition: defaultCondition,
         },
       ];
     });
@@ -74,6 +90,17 @@ export const CartProvider = ({ children }) => {
     const normalizedQty = Math.max(1, Number(quantity) || 1);
     setItems((prev) =>
       prev.map((entry) => (entry.id === id ? { ...entry, quantity: normalizedQty } : entry))
+    );
+  };
+
+  const updateCondition = (id, condition) => {
+    const normalized = String(condition || 'normal').toLowerCase();
+    setItems((prev) =>
+      prev.map((entry) =>
+        entry.id === id
+          ? { ...entry, condition: ['normal', 'ok', 'not good'].includes(normalized) ? normalized : 'normal' }
+          : entry
+      )
     );
   };
 
@@ -96,6 +123,7 @@ export const CartProvider = ({ children }) => {
     items,
     addItem,
     updateQuantity,
+    updateCondition,
     removeItem,
     clearCart,
     totalItems,

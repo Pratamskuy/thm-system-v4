@@ -13,7 +13,7 @@ const INITIAL_FORM_STATE = {
 
 function Cart() {
   const { isPeminjam } = useAuth();
-  const { items, updateQuantity, removeItem, clearCart, totalItems, totalQuantity } = useCart();
+  const { items, updateQuantity, updateCondition, removeItem, clearCart, totalItems, totalQuantity } = useCart();
   const [inventoryItems, setInventoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(INITIAL_FORM_STATE);
@@ -40,6 +40,10 @@ function Cart() {
       map.set(item.id, {
         available: Number(item.available) || 0,
         total: Number(item.total) || 0,
+        stock_normal: Number(item.stock_normal) || 0,
+        stock_ok: Number(item.stock_ok) || 0,
+        stock_not_good: Number(item.stock_not_good) || 0,
+        stock_broken: Number(item.stock_broken) || 0,
       });
     });
     return map;
@@ -57,6 +61,22 @@ function Cart() {
       }),
     [items, inventoryMap]
   );
+
+  const normalizeCondition = (value) => {
+    const condition = String(value || 'normal').toLowerCase();
+    if (['normal', 'ok', 'not good'].includes(condition)) return condition;
+    return 'normal';
+  };
+
+  const getConditionStock = (entry) => {
+    const inventory = inventoryMap.get(entry.id);
+    const condition = normalizeCondition(entry.condition);
+    if (!inventory) return 0;
+
+    if (condition === 'ok') return inventory.stock_ok;
+    if (condition === 'not good') return inventory.stock_not_good;
+    return inventory.stock_normal;
+  };
 
   const getMaxStock = (entry) => {
     const total = Number(entry.total) || 0;
@@ -131,6 +151,7 @@ function Cart() {
         items: cartRows.map((entry) => ({
           id_items: entry.id,
           item_count: Number(entry.quantity) || 1,
+          item_condition: normalizeCondition(entry.condition),
           return_date_expected: form.return_date_expected,
           notes: null,
         })),
@@ -209,6 +230,9 @@ function Cart() {
                 const outOfStock = entry.available <= 0;
                 const exceedsStock = entry.quantity > entry.available;
                 const isUnavailable = maxStock <= 0;
+                const selectedCondition = normalizeCondition(entry.condition);
+                const selectedConditionStock = getConditionStock(entry);
+                const inventoryItem = inventoryMap.get(entry.id) || {};
                 return (
                   <div className="cart-item" key={entry.id}>
                     <div className="cart-item-info">
@@ -228,6 +252,26 @@ function Cart() {
                           <span className="cart-item-warning"> Quantity exceeds stock (queued)</span>
                         )}
                       </p>
+                      <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                        <label className="form-label" htmlFor={`condition-${entry.id}`}>
+                          Item Condition
+                        </label>
+                        <select
+                          id={`condition-${entry.id}`}
+                          className="form-input"
+                          value={selectedCondition}
+                          onChange={(e) => updateCondition(entry.id, e.target.value)}
+                        >
+                          <option value="normal">Normal ({inventoryItem.stock_normal || 0})</option>
+                          <option value="ok">OK ({inventoryItem.stock_ok || 0})</option>
+                          <option value="not good">Not Good ({inventoryItem.stock_not_good || 0})</option>
+                        </select>
+                        {!isUnavailable && selectedConditionStock < entry.quantity && (
+                          <p className="cart-item-warning" style={{ marginTop: '0.5rem' }}>
+                            Kondisi {selectedCondition} tidak cukup untuk jumlah ini. Item akan antre jika disimpan.
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="cart-item-actions">
                       <div className="qty-control">

@@ -569,6 +569,7 @@ function Borrows() {
                                   <thead>
                                     <tr>
                                       <th>Item</th>
+                                      <th>Condition</th>
                                       <th>Qty</th>
                                       <th>Return Date</th>
                                       <th>Status</th>
@@ -578,6 +579,7 @@ function Borrows() {
                                     {items.map((item) => (
                                       <tr key={`batch-detail-${request.request_id}-${item.borrow_id}`}>
                                         <td>{item.item_name}</td>
+                                        <td>{item.item_condition || '-'}</td>
                                         <td>{item.item_count}</td>
                                         <td>{formatDate(item.return_date_expected)}</td>
                                         <td>{item.borrow_status}</td>
@@ -614,6 +616,7 @@ function Borrows() {
                   <th>ID</th>
                   <th>Borrower</th>
                   <th>Item</th>
+                  <th>Condition</th>
                   <th>Category</th>
                   <th>Quantity</th>
                   <th>Borrow Date</th>
@@ -629,6 +632,7 @@ function Borrows() {
                     <td>#{borrow.id}</td>
                     <td>{borrow.full_name}</td>
                     <td>{borrow.item_name}</td>
+                    <td>{borrow.item_condition || '-'}</td>
                     <td>{borrow.category || '-'}</td>
                     <td>{borrow.item_count}</td>
                     <td>{new Date(borrow.borrow_date).toLocaleDateString()}</td>
