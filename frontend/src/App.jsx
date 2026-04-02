@@ -156,7 +156,7 @@ function AppRoutes() {
     </Router>
   );
 }
-
+//ANIMASI KURSOR
 function App() {
   const cursorRef = useRef(null);
 
