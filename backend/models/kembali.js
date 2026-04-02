@@ -60,9 +60,9 @@ const hitungDenda = (returnDateExpected, returnDate, kondisi = 'normal') => {
     // Denda kerusakan
     let dendaKerusakan = 0;
     if (kondisi === 'not good') {
-        dendaKerusakan = 20000; //denda rusak ringan
+        dendaKerusakan = 120000; //denda rusak ringan
     } else if (kondisi === 'broken') {
-        dendaKerusakan = 50000; //denda rusak berat
+        dendaKerusakan = 500000; //denda rusak berat
     }
 
     return {
